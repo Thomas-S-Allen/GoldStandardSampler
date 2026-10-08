@@ -1,0 +1,623 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gold Standard Sampler Viewer</title>
+  <style>
+    :root {
+      --ink: #17212b;
+      --muted: #61707d;
+      --paper: #f4f1e9;
+      --panel: #fffdf8;
+      --line: #d9d4c8;
+      --navy: #17324d;
+      --navy-soft: #244967;
+      --teal: #18756f;
+      --amber: #d28a20;
+      --red: #b54b4b;
+      --shadow: 0 18px 45px rgba(23, 50, 77, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 90% 5%, rgba(210, 138, 32, 0.12), transparent 26rem),
+        var(--paper);
+      font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    button { font: inherit; }
+
+    .app {
+      display: grid;
+      grid-template-columns: 310px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    aside {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow: auto;
+      color: white;
+      background: var(--navy);
+      border-right: 1px solid rgba(255, 255, 255, 0.09);
+    }
+
+    .brand {
+      padding: 30px 26px 24px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .eyebrow {
+      color: #ecc477;
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 8px 0 6px;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 1.55rem;
+      font-weight: 600;
+      line-height: 1.12;
+    }
+
+    .brand p {
+      margin: 0;
+      color: #b9c8d4;
+      font-size: 0.86rem;
+      line-height: 1.45;
+    }
+
+    .cell-heading {
+      padding: 22px 22px 9px;
+      color: #99afc0;
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    #cells { padding: 0 12px 28px; }
+
+    .cell-button {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 5px 12px;
+      width: 100%;
+      margin: 3px 0;
+      padding: 11px 12px;
+      color: #dce7ee;
+      text-align: left;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 9px;
+      cursor: pointer;
+    }
+
+    .cell-button:hover { background: rgba(255, 255, 255, 0.06); }
+
+    .cell-button.active {
+      background: var(--navy-soft);
+      border-color: rgba(255, 255, 255, 0.11);
+      box-shadow: inset 3px 0 #e4a43f;
+    }
+
+    .cell-name { font-size: 0.84rem; font-weight: 700; }
+    .cell-method { color: #9cb0bf; font-size: 0.72rem; }
+    .cell-count { grid-row: 1 / 3; grid-column: 2; align-self: center; color: #ecc477; font-size: 0.76rem; }
+
+    main { min-width: 0; padding: 34px 42px 50px; }
+
+    .topbar {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 24px;
+      max-width: 1220px;
+      margin: 0 auto 24px;
+    }
+
+    h2 {
+      margin: 5px 0 0;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(1.65rem, 3vw, 2.5rem);
+      font-weight: 500;
+      letter-spacing: -0.025em;
+    }
+
+    .page-note { margin: 7px 0 0; color: var(--muted); font-size: 0.9rem; }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(120px, 1fr));
+      gap: 10px;
+      width: min(100%, 520px);
+    }
+
+    .stat {
+      padding: 13px 16px;
+      background: rgba(255, 253, 248, 0.72);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+    }
+
+    .stat-label { color: var(--muted); font-size: 0.66rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; }
+    .stat-value { display: block; margin-top: 4px; font-family: Georgia, serif; font-size: 1.25rem; }
+
+    .content { max-width: 1220px; margin: auto; }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 12px;
+      padding: 11px 14px;
+      background: rgba(255, 253, 248, 0.76);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+    }
+
+    .range { color: var(--muted); font-size: 0.84rem; }
+    .toolbar-controls { display: flex; align-items: center; gap: 18px; }
+    .filter-label { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 0.78rem; font-weight: 700; }
+    .filter-label select {
+      padding: 7px 30px 7px 10px;
+      color: var(--navy);
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      font: inherit;
+      cursor: pointer;
+    }
+    .filter-label select:focus { outline: 2px solid rgba(24, 117, 111, 0.25); border-color: var(--teal); }
+    .pager { display: flex; align-items: center; gap: 8px; }
+    .pager span { min-width: 100px; color: var(--muted); text-align: center; font-size: 0.8rem; }
+
+    .pager button, .close-button {
+      padding: 7px 12px;
+      color: var(--navy);
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      cursor: pointer;
+    }
+
+    .pager button:hover:not(:disabled), .close-button:hover { border-color: var(--teal); color: var(--teal); }
+    .pager button:disabled { cursor: default; opacity: 0.4; }
+
+    #records { display: grid; gap: 10px; }
+
+    .record {
+      display: grid;
+      grid-template-columns: 56px minmax(0, 1fr) auto;
+      gap: 16px;
+      width: 100%;
+      padding: 18px;
+      color: inherit;
+      text-align: left;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      box-shadow: 0 4px 14px rgba(23, 50, 77, 0.04);
+      cursor: pointer;
+      transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+    }
+
+    .record:hover {
+      transform: translateY(-2px);
+      border-color: #a8b9bc;
+      box-shadow: var(--shadow);
+    }
+
+    .rank { color: #9b958a; font-family: Georgia, serif; font-size: 1.25rem; }
+    .reference { margin: 0 0 10px; font-family: Georgia, serif; font-size: 1.02rem; line-height: 1.5; }
+    .meta { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; color: var(--muted); font-size: 0.76rem; }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 7px;
+      color: #3f5965;
+      background: #edf2ef;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      font-weight: 700;
+    }
+
+    .status { justify-self: end; text-align: right; }
+    .status strong { display: block; margin-top: 7px; color: var(--navy); font-size: 0.8rem; }
+    .matched { color: #11655f; background: #dceeea; }
+    .uncertain { color: #875914; background: #f7e8c9; }
+    .unmatched { color: #984242; background: #f5dddd; }
+
+    .empty {
+      padding: 70px 30px;
+      color: var(--muted);
+      text-align: center;
+      background: var(--panel);
+      border: 1px dashed var(--line);
+      border-radius: 12px;
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      display: none;
+      padding: 28px;
+      background: rgba(10, 25, 38, 0.64);
+      backdrop-filter: blur(5px);
+      overflow: auto;
+    }
+
+    .overlay.open { display: grid; place-items: start center; }
+
+    .detail {
+      width: min(980px, 100%);
+      margin: 3vh auto;
+      overflow: hidden;
+      background: var(--panel);
+      border-radius: 16px;
+      box-shadow: 0 26px 80px rgba(0, 0, 0, 0.28);
+    }
+
+    .detail-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 24px 28px;
+      color: white;
+      background: var(--navy);
+    }
+
+    .detail-head h3 { margin: 5px 0 0; font-family: Georgia, serif; font-size: 1.5rem; font-weight: 500; }
+    .detail-head .close-button { color: white; background: transparent; border-color: rgba(255, 255, 255, 0.3); }
+    .detail-body { padding: 28px; }
+    .readable { margin: 0 0 24px; font-family: Georgia, serif; font-size: 1.18rem; line-height: 1.65; }
+    .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+    .section {
+      padding: 18px;
+      background: #f7f5ef;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+    }
+
+    .section h4 { margin: 0 0 14px; color: var(--teal); font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; }
+    .definition { display: grid; grid-template-columns: 125px minmax(0, 1fr); gap: 8px; margin: 8px 0; font-size: 0.8rem; }
+    .definition dt { color: var(--muted); }
+    .definition dd { margin: 0; overflow-wrap: anywhere; }
+    .fields { display: flex; flex-wrap: wrap; gap: 7px; }
+    .field-off { color: #908c83; background: #ebe8e0; text-decoration: line-through; }
+
+    details { margin-top: 20px; }
+    summary { color: var(--teal); cursor: pointer; font-size: 0.82rem; font-weight: 700; }
+    pre { max-height: 280px; padding: 16px; overflow: auto; white-space: pre-wrap; color: #dbe7ee; background: #162633; border-radius: 9px; font-size: 0.74rem; line-height: 1.5; }
+
+    @media (max-width: 860px) {
+      .app { display: block; }
+      aside { position: static; height: auto; max-height: 330px; }
+      .brand { padding: 20px; }
+      main { padding: 24px 18px 40px; }
+      .topbar { display: block; }
+      .stats { margin-top: 18px; }
+      .record { grid-template-columns: 40px minmax(0, 1fr); }
+      .status { grid-column: 2; justify-self: start; display: flex; gap: 8px; align-items: center; }
+      .status strong { margin: 0; }
+      .detail-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 520px) {
+      .stats { grid-template-columns: 1fr 1fr; }
+      .stat:last-child { grid-column: 1 / 3; }
+      .toolbar { align-items: flex-start; flex-direction: column; }
+      .toolbar-controls { width: 100%; align-items: flex-start; flex-direction: column; }
+      .definition { grid-template-columns: 1fr; gap: 2px; }
+      .overlay { padding: 8px; }
+      .detail-body, .detail-head { padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside>
+      <div class="brand">
+        <div class="eyebrow">SciX curation tool</div>
+        <h1>Gold Standard Sampler</h1>
+        <p>Browse ranked reference and candidate pairs by sampling cell.</p>
+      </div>
+      <div class="cell-heading">Sampling cells</div>
+      <nav id="cells" aria-label="Sampling cells"><div class="empty">Loading cells…</div></nav>
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <div>
+          <div class="eyebrow" style="color: var(--teal)">Candidate pool</div>
+          <h2 id="title">Choose a sampling cell</h2>
+          <p class="page-note" id="subtitle">Records are shown in descending priority order.</p>
+        </div>
+        <div class="stats">
+          <div class="stat"><span class="stat-label">All candidates</span><strong class="stat-value" id="total-all">—</strong></div>
+          <div class="stat"><span class="stat-label">Current cell</span><strong class="stat-value" id="total-cell">—</strong></div>
+          <div class="stat"><span class="stat-label">Target range</span><strong class="stat-value" id="target">—</strong></div>
+        </div>
+      </header>
+
+      <section class="content">
+        <div class="toolbar">
+          <span class="range" id="range">Select a cell to begin.</span>
+          <div class="toolbar-controls">
+            <label class="filter-label" for="category">
+              Match category
+              <select id="category">
+                <option value="all">All</option>
+                <option value="matched">Matched</option>
+                <option value="near_miss">Near miss</option>
+                <option value="no_match">No match</option>
+              </select>
+            </label>
+            <div class="pager">
+              <button id="previous" type="button">← Previous</button>
+              <span id="page-label">Page —</span>
+              <button id="next" type="button">Next →</button>
+            </div>
+          </div>
+        </div>
+        <div id="records"><div class="empty">Select a cell from the left to inspect its reference pairs.</div></div>
+      </section>
+    </main>
+  </div>
+
+  <div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-labelledby="detail-title">
+    <article class="detail">
+      <header class="detail-head">
+        <div><div class="eyebrow">Reference pair</div><h3 id="detail-title">Candidate detail</h3></div>
+        <button class="close-button" id="close" type="button">Close</button>
+      </header>
+      <div class="detail-body" id="detail-body"></div>
+    </article>
+  </div>
+
+  <script>
+    const state = { cells: [], cell: null, category: "all", page: 1, pages: 1, loading: false };
+    const byId = (id) => document.getElementById(id);
+    const formatNumber = (value) => new Intl.NumberFormat().format(value || 0);
+    const titleCase = (value) => String(value || "unknown").replaceAll("_", " ").replace(/\b\w/g, char => char.toUpperCase());
+
+    function readableReference(raw) {
+      if (!raw || !raw.includes("<")) return raw || "No reference string";
+      const parsed = new DOMParser().parseFromString(`<root>${raw}</root>`, "application/xml");
+      if (parsed.querySelector("parsererror")) return raw.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+      const walker = document.createTreeWalker(parsed.documentElement, NodeFilter.SHOW_TEXT);
+      const parts = [];
+      while (walker.nextNode()) {
+        const value = walker.currentNode.nodeValue.trim();
+        if (value) parts.push(value);
+      }
+      return parts.join(" ").replace(/\s+/g, " ").trim();
+    }
+
+    function element(tag, className, text) {
+      const node = document.createElement(tag);
+      if (className) node.className = className;
+      if (text !== undefined) node.textContent = text;
+      return node;
+    }
+
+    function statusInfo(status) {
+      if (status === 1) return { label: "Matched", className: "matched" };
+      if (status === 5) return { label: "Near miss", className: "uncertain" };
+      return { label: "No match", className: "unmatched" };
+    }
+
+    async function loadCells() {
+      try {
+        const response = await fetch("/api/cells");
+        const payload = await response.json();
+        state.cells = payload.cells;
+        renderCells();
+        byId("total-all").textContent = formatNumber(state.cells.reduce((sum, cell) => sum + cell.count, 0));
+        if (state.cells.length) selectCell(state.cells[0].key);
+        else byId("cells").innerHTML = '<div class="empty">No JSONL files found.</div>';
+      } catch (error) {
+        showError(`Could not load output: ${error.message}`);
+      }
+    }
+
+    function renderCells() {
+      const container = byId("cells");
+      container.replaceChildren();
+      for (const cell of state.cells) {
+        const button = element("button", "cell-button");
+        button.type = "button";
+        button.dataset.cell = cell.key;
+        button.append(
+          element("span", "cell-name", titleCase(cell.discipline)),
+          element("span", "cell-method", titleCase(cell.parse_method)),
+          element("span", "cell-count", formatNumber(cell.count))
+        );
+        button.addEventListener("click", () => selectCell(cell.key));
+        container.append(button);
+      }
+    }
+
+    function selectCell(key) {
+      state.cell = state.cells.find(cell => cell.key === key);
+      state.page = 1;
+      document.querySelectorAll(".cell-button").forEach(button => button.classList.toggle("active", button.dataset.cell === key));
+      byId("title").textContent = `${titleCase(state.cell.discipline)} · ${titleCase(state.cell.parse_method)}`;
+      byId("total-cell").textContent = formatNumber(state.cell.count);
+      byId("target").textContent = Number.isInteger(state.cell.target_min) ? `${formatNumber(state.cell.target_min)}–${formatNumber(state.cell.target_max)}` : "Not set";
+      loadPage();
+    }
+
+    async function loadPage() {
+      if (!state.cell || state.loading) return;
+      state.loading = true;
+      setPagerDisabled(true);
+      byId("records").innerHTML = '<div class="empty">Loading reference pairs…</div>';
+      try {
+        const params = new URLSearchParams({ cell: state.cell.key, page: state.page, category: state.category });
+        const response = await fetch(`/api/candidates?${params}`);
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || "Request failed");
+        state.pages = payload.pages;
+        renderRecords(payload);
+      } catch (error) {
+        showError(error.message);
+      } finally {
+        state.loading = false;
+        updatePager();
+      }
+    }
+
+    function renderRecords(payload) {
+      const container = byId("records");
+      container.replaceChildren();
+      const start = (payload.page - 1) * payload.page_size;
+      const shownEnd = Math.min(start + payload.records.length, payload.total);
+      const categoryLabel = payload.category === "all" ? "records" : `${titleCase(payload.category)} records`;
+      byId("range").textContent = payload.total ? `Showing ${formatNumber(start + 1)}–${formatNumber(shownEnd)} of ${formatNumber(payload.total)} ${categoryLabel}` : `No ${categoryLabel.toLowerCase()} in this cell.`;
+
+      if (!payload.records.length) {
+        container.append(element("div", "empty", "No records on this page."));
+        return;
+      }
+
+      payload.records.forEach((record, offset) => {
+        const reference = record.reference || {};
+        const candidate = record.candidate || {};
+        const status = statusInfo(record.match_status);
+        const button = element("button", "record");
+        button.type = "button";
+        const rank = payload.ranks[offset];
+        button.append(element("div", "rank", `#${formatNumber(rank)}`));
+
+        const center = element("div");
+        center.append(element("p", "reference", readableReference(reference.reference_string)));
+        const meta = element("div", "meta");
+        meta.append(
+          element("span", "pill", titleCase(reference.publication_type)),
+          element("span", "", candidate.bibcode || "No candidate bibcode"),
+          element("span", "", `Source: ${reference.source_document_id || "unknown"}`)
+        );
+        center.append(meta);
+        button.append(center);
+
+        const statusBox = element("div", "status");
+        statusBox.append(element("span", `pill ${status.className}`, status.label));
+        statusBox.append(element("strong", "", `Priority ${Number(record.priority_score || 0).toFixed(4)}`));
+        button.append(statusBox);
+        button.addEventListener("click", () => openDetail(record, rank));
+        container.append(button);
+      });
+    }
+
+    function definitionList(entries) {
+      const list = element("dl");
+      for (const [label, value] of entries) {
+        const row = element("div", "definition");
+        row.append(element("dt", "", label), element("dd", "", value ?? "—"));
+        list.append(row);
+      }
+      return list;
+    }
+
+    function detailSection(title, entries) {
+      const section = element("section", "section");
+      section.append(element("h4", "", title), definitionList(entries));
+      return section;
+    }
+
+    function openDetail(record, rank) {
+      const reference = record.reference || {};
+      const candidate = record.candidate || {};
+      const status = statusInfo(record.match_status);
+      byId("detail-title").textContent = `Rank #${formatNumber(rank)} · ${status.label}`;
+      const body = byId("detail-body");
+      body.replaceChildren(element("p", "readable", readableReference(reference.reference_string)));
+
+      const grid = element("div", "detail-grid");
+      grid.append(
+        detailSection("Reference", [
+          ["Source document", reference.source_document_id],
+          ["Discipline", titleCase(reference.discipline)],
+          ["Parse method", titleCase(reference.parse_method)],
+          ["Provenance", titleCase(reference.source_provenance)],
+          ["Publication type", titleCase(reference.publication_type)],
+          ["Type confidence", titleCase(reference.publication_type_confidence)],
+          ["Sampling slice", titleCase(reference.sampling_slice)],
+          ["ADS confidence", reference.ads_confidence_score],
+          ["Reference ID", reference.id],
+          ["Source file", reference.source_filename]
+        ]),
+        detailSection("Candidate", [
+          ["Bibcode", candidate.bibcode],
+          ["SciX ID", candidate.scix_id],
+          ["Match status", `${record.match_status} · ${status.label}`],
+          ["Negative type", titleCase(candidate.negative_type || "none")],
+          ["Needs adjudication", candidate.needs_adjudication ? "Yes" : "No"],
+          ["Priority score", Number(record.priority_score || 0).toFixed(4)],
+          ["Candidate ID", candidate.id],
+          ["Article references", reference.article_n_total],
+          ["Article matched", reference.article_n_matched],
+          ["Article uncertain", reference.article_n_uncertain],
+          ["Article unmatched", reference.article_n_unmatched]
+        ])
+      );
+      body.append(grid);
+
+      const fieldSection = element("section", "section");
+      fieldSection.style.marginTop = "20px";
+      fieldSection.append(element("h4", "", "Detected fields"));
+      const fields = element("div", "fields");
+      Object.entries(reference.field_presence || {}).forEach(([name, present]) => fields.append(element("span", `pill ${present ? "" : "field-off"}`, titleCase(name))));
+      fieldSection.append(fields);
+      body.append(fieldSection);
+
+      const raw = document.createElement("details");
+      raw.append(element("summary", "", "Show raw reference string"), element("pre", "", reference.reference_string || ""));
+      body.append(raw);
+      byId("overlay").classList.add("open");
+      byId("close").focus();
+    }
+
+    function closeDetail() { byId("overlay").classList.remove("open"); }
+    function setPagerDisabled(disabled) { byId("previous").disabled = disabled; byId("next").disabled = disabled; }
+
+    function updatePager() {
+      byId("page-label").textContent = `Page ${formatNumber(state.page)} of ${formatNumber(state.pages)}`;
+      byId("previous").disabled = state.loading || state.page <= 1;
+      byId("next").disabled = state.loading || state.page >= state.pages;
+    }
+
+    function showError(message) {
+      byId("records").replaceChildren(element("div", "empty", message));
+      byId("range").textContent = "Unable to display records.";
+    }
+
+    byId("previous").addEventListener("click", () => { if (state.page > 1) { state.page -= 1; loadPage(); } });
+    byId("next").addEventListener("click", () => { if (state.page < state.pages) { state.page += 1; loadPage(); } });
+    byId("category").addEventListener("change", event => {
+      state.category = event.target.value;
+      state.page = 1;
+      loadPage();
+    });
+    byId("close").addEventListener("click", closeDetail);
+    byId("overlay").addEventListener("click", event => { if (event.target === byId("overlay")) closeDetail(); });
+    document.addEventListener("keydown", event => { if (event.key === "Escape") closeDetail(); });
+    loadCells();
+  </script>
+</body>
+</html>
